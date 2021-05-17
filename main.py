@@ -418,9 +418,18 @@ def set_pincode(update: Update, ctx: CallbackContext) -> None:
         return
     pincode = pincode.strip()
     # validating pincode is the third difficult problem of computer science
-    if pincode in ["000000", "111111", "123456"] or not len(pincode) == 6:
-        update.effective_chat.send_message("Uh oh! That doesn't look like a valid pincode."
-                                           "Please enter a valid pincode to proceed")
+    # if pincode in ["000000", "111111", "123456"] or not len(pincode) == 6:
+    #     update.effective_chat.send_message("Uh oh! That doesn't look like a valid pincode."
+    #                                        "Please enter a valid pincode to proceed")
+    #     return
+    try:
+        districtCode = int(pincode)
+        if districtCode < 0 or districtCode > 799:
+            update.effective_chat.send_message("Uh oh! That doesn't look like a valid district code."
+                                               "Please enter a valid pincode from here: https://github.com/abhinavdc/cowin-pinger")
+            return
+    except Exception as e:
+        update.effective_chat.send_message("District code must be an integer")
         return
     user: User
     user, _ = get_or_create_user(telegram_id=update.effective_user.id, chat_id=update.effective_chat.id)
