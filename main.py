@@ -522,6 +522,7 @@ def background_worker(age_limit: AgeRangePref):
 
             # for users with age limit of 18, we send the alert
             if user.age_limit == AgeRangePref.MinAge18:
+                bot.send_message(chat_id=user.chat_id, text=sanitise_msg("Checked"), parse_mode='markdown')
                 filtered_centers = filter_centers_by_age_limit(user.age_limit, vaccination_centers)
                 if not filtered_centers:
                     continue

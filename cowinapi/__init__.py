@@ -107,8 +107,8 @@ class CoWinAPI:
     """
 
     def calender_by_pin(self: "CoWinAPI", pincode: str, date: str) -> Optional[List[VaccinationCenter]]:
-        url = urllib.parse.urljoin(self.base_domain, "/api/v2/appointment/sessions/public/calendarByPin")
-        params = {'pincode': pincode, 'date': date}
+        url = urllib.parse.urljoin(self.base_domain, "/api/v2/appointment/sessions/public/calendarByDistrict")
+        params = {'district_id': pincode, 'date': date}
         r = self.requests.get(url, params=params, headers=self.get_default_headers())
         if r.status_code == requests.codes.bad_request:
             raise CoWinAPIException(**r.json())
