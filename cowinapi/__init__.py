@@ -107,7 +107,7 @@ class CoWinAPI:
     """
 
     def calender_by_pin(self: "CoWinAPI", pincode: str, date: str) -> Optional[List[VaccinationCenter]]:
-        url = urllib.parse.urljoin(self.base_domain, "/api/v2/appointment/sessions/public/calendarByDistrict")
+        url = urllib.parse.urljoin(self.base_domain, "/api/v2/appointment/sessions/calendarByDistrict")
         params = {'district_id': pincode, 'date': date}
         r = self.requests.get(url, params=params, headers=self.get_default_headers())
         if r.status_code == requests.codes.bad_request:
@@ -122,6 +122,7 @@ class CoWinAPI:
 
     def get_default_headers(self) -> dict:
         return {'Accept-Language': self.accept_language, 'accept': 'application/json',
+                'Authorization': 'Bearer TODO',
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, '
                               'like Gecko) Chrome/90.0.4430.93 Safari/537.36'}
 

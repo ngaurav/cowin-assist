@@ -27,7 +27,7 @@ DISABLE_TEXT_REGEX = r'\s*disable|stop|pause\s*'
 
 # All the really complex configs:
 # Following says, how often we should poll CoWin APIs for age group 18+. In seconds
-MIN_18_WORKER_INTERVAL = 30
+MIN_18_WORKER_INTERVAL = 180
 # Following says, how often we should poll CoWin APIs for age group 45+. In seconds
 MIN_45_WORKER_INTERVAL = 60 * 10  # 10 minutes
 # Following decides, should we send a notification to user about 45+ or not.
@@ -510,7 +510,7 @@ def background_worker(age_limit: AgeRangePref):
         # get all the available vaccination centers with open slots
         vaccination_centers = get_available_centers_by_pin(distinct_user.pincode)
         # sleep, since we have hit CoWin APIs
-        time.sleep(COWIN_API_DELAY_INTERVAL)
+        # time.sleep(COWIN_API_DELAY_INTERVAL)
         if not vaccination_centers:
             continue
         # find all users for this pincode and alerts enabled
@@ -531,7 +531,7 @@ def background_worker(age_limit: AgeRangePref):
 
             # for users with age limit of 18, we send the alert
             if user.age_limit == AgeRangePref.MinAge18:
-                bot.send_message(chat_id=user.chat_id, text=sanitise_msg("Checked"), parse_mode='markdown')
+                bot.send_message(chat_id=user.chat_id, disable_notification=True, text=sanitise_msg("Checked"), parse_mode='markdown')
                 filtered_centers = filter_centers_by_age_limit(user.age_limit, vaccination_centers)
                 if not filtered_centers:
                     continue
