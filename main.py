@@ -217,7 +217,7 @@ def delete_cmd_handler(update: Update, _: CallbackContext):
 
     user.deleted_at = datetime.now()
     user.enabled = False
-    user.pincode = None
+    user.districtcode = None
     user.age_limit = AgeRangePref.Unknown
     user.save()
     update.effective_chat.send_message("Your data has been successfully deleted. Click on /start to restart the bot.")
@@ -258,7 +258,7 @@ def check_if_preferences_are_set(update: Update, ctx: CallbackContext) -> Option
     if user.age_limit is None or user.age_limit == AgeRangePref.Unknown:
         age_command(update, ctx)
         return
-    if user.pincode is None:
+    if user.districtcode is None:
         districtcode_command(update, ctx)
         return
     return user
@@ -353,7 +353,7 @@ def filter_centers_by_age_limit(age_limit: AgeRangePref, centers: List[Vaccinati
 
 
 def get_message_header(user: User) -> str:
-    return F"Following slots are available (districtcode: {user.pincode}, age preference: {user.age_limit})\n"
+    return F"Following slots are available (districtcode: {user.districtcode}, age preference: {user.age_limit})\n"
 
 
 def check_slots_command(update: Update, ctx: CallbackContext) -> None:
@@ -362,7 +362,7 @@ def check_slots_command(update: Update, ctx: CallbackContext) -> None:
         return
     vaccination_centers: List[VaccinationCenter]
     try:
-        vaccination_centers = get_available_centers_by_pin(user.pincode)
+        vaccination_centers = get_available_centers_by_pin(user.districtcode)
     except CoWinTooManyRequests:
         update.effective_chat.send_message(
             F"Hey sorry, I wasn't able to reach [CoWin Site](https://www.cowin.gov.in/home) at this moment. "
@@ -371,7 +371,7 @@ def check_slots_command(update: Update, ctx: CallbackContext) -> None:
     vaccination_centers = filter_centers_by_age_limit(user.age_limit, vaccination_centers)
     if not vaccination_centers:
         update.effective_chat.send_message(
-            F"Hey sorry, seems there are no free slots available (districtcode: {user.pincode}, age preference: {user.age_limit})")
+            F"Hey sorry, seems there are no free slots available (districtcode: {user.districtcode}, age preference: {user.age_limit})")
         return
 
     msg: str = get_formatted_message(centers=vaccination_centers, age_limit=user.age_limit)
@@ -404,7 +404,7 @@ def set_age_preference(update: Update, ctx: CallbackContext) -> None:
     user.deleted_at = None
     user.save()
 
-    if user.pincode:
+    if user.districtcode:
         update.effective_chat.send_message(F"I have set your age preference to {user.age_limit}",
                                            reply_markup=InlineKeyboardMarkup([[*get_main_buttons()]]))
     else:
@@ -433,7 +433,7 @@ def set_districtcode(update: Update, ctx: CallbackContext) -> None:
         return
     user: User
     user, _ = get_or_create_user(telegram_id=update.effective_user.id, chat_id=update.effective_chat.id)
-    user.pincode = districtcode
+    user.districtcode = districtcode
     user.updated_at = datetime.now()
     user.deleted_at = None
     user.save()
@@ -501,21 +501,21 @@ def background_worker(age_limit: AgeRangePref):
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
     time_now = datetime.now()
     # find all distinct districtcodes where districtcode is not null and at least one user exists with alerts enabled
-    query = User.select(User.pincode).where(
-        (User.pincode.is_null(False)) & (User.enabled == True) & (
+    query = User.select(User.districtcode).where(
+        (User.districtcode.is_null(False)) & (User.enabled == True) & (
                 (User.age_limit == AgeRangePref.MinAgeAny) | (User.age_limit == age_limit))).distinct()
     # TODO: Quick hack to load all districtcodes in memory
     query = list(query)
     for distinct_user in query:
         # get all the available vaccination centers with open slots
-        vaccination_centers = get_available_centers_by_pin(distinct_user.pincode)
+        vaccination_centers = get_available_centers_by_pin(distinct_user.districtcode)
         # sleep, since we have hit CoWin APIs
         # time.sleep(COWIN_API_DELAY_INTERVAL)
         if not vaccination_centers:
             continue
         # find all users for this districtcode and alerts enabled
         user_query = User.select().where(
-            (User.pincode == distinct_user.pincode) & (User.enabled == True) & (
+            (User.districtcode == distinct_user.districtcode) & (User.enabled == True) & (
                     (User.age_limit == AgeRangePref.MinAgeAny) | (User.age_limit == age_limit)
             ))
         for user in user_query:
@@ -601,8 +601,8 @@ def main() -> None:
     db.create_tables([User, ])
     # create the required index
     # TODO:
-    # User.add_index(User.enabled, User.pincode,
-    #                where=((User.enabled == True) & (User.pincode.is_null(False))))
+    # User.add_index(User.enabled, User.districtcode,
+    #                where=((User.enabled == True) & (User.districtcode.is_null(False))))
 
     # initialise the handler
     updater = Updater(TELEGRAM_BOT_TOKEN)
