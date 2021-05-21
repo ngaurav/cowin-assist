@@ -409,7 +409,7 @@ def set_age_preference(update: Update, ctx: CallbackContext) -> None:
                                            reply_markup=InlineKeyboardMarkup([[*get_main_buttons()]]))
     else:
         update.effective_chat.send_message(
-            F"I have set your age preference to {user.age_limit}. Please enter your districtcode to proceed")
+            F"I have set your age preference to {user.age_limit}. Please enter your districtcode from here: https://github.com/abhinavdc/cowin-pinger")
 
 
 def set_districtcode(update: Update, ctx: CallbackContext) -> None:
