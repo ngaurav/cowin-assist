@@ -18,9 +18,9 @@ from jinja2 import Template
 from peewee import SqliteDatabase, Model, DateTimeField, CharField, FixedCharField, IntegerField, BooleanField
 
 from cowinapi import CoWinAPI, VaccinationCenter, CoWinTooManyRequests
-from secrets import TELEGRAM_BOT_TOKEN, DEVELOPER_CHAT_ID
+from secrets import TELEGRAM_BOT_TOKEN, DEVELOPER_CHAT_ID, TOKEN
 
-PINCODE_PREFIX_REGEX = r'^\s*(pincode)?\s*(?P<pincode_mg>\d+)\s*'
+districtcode_PREFIX_REGEX = r'^\s*(districtcode)?\s*(?P<districtcode_mg>\d+)\s*'
 AGE_BUTTON_REGEX = r'^age: (?P<age_mg>\d+)'
 CMD_BUTTON_REGEX = r'^cmd: (?P<cmd_mg>.+)'
 DISABLE_TEXT_REGEX = r'\s*disable|stop|pause\s*'
@@ -95,7 +95,7 @@ class User(Model):
     total_alerts_sent = IntegerField(default=0)
     telegram_id = CharField(max_length=220, unique=True)
     chat_id = CharField(max_length=220)
-    pincode: str = FixedCharField(max_length=6, null=True, index=True)
+    districtcode: str = FixedCharField(max_length=6, null=True, index=True)
     age_limit: AgeRangePref = EnumField(choices=AgeRangePref, default=AgeRangePref.Unknown)
     enabled = BooleanField(default=False, index=True)
 
@@ -159,7 +159,7 @@ Welcome to CoWin Assist bot.
 I will weekly check slots availability in your area and alert you when one becomes available. To start either click 
 🔔 *Setup Alert* or 🔍 *Check Open Slots*.
 
-If you are a first time user I will ask for your age and pincode."""
+If you are a first time user I will ask for your age and districtcode."""
     update.message.reply_text(msg, reply_markup=get_main_keyboard(), parse_mode="markdown")
 
 
@@ -193,11 +193,11 @@ def cmd_button_handler(update: Update, ctx: CallbackContext) -> None:
 
 
 def get_help_text_short() -> str:
-    return """This bot will help you to check current available slots in one week and also, alert you when one becomes available. To start, either click on "Setup Alert" or "Check Open Slots". For first time users, bot will ask for age preference and pincode."""  ## noqa
+    return """This bot will help you to check current available slots in one week and also, alert you when one becomes available. To start, either click on "Setup Alert" or "Check Open Slots". For first time users, bot will ask for age preference and districtcode."""  ## noqa
 
 
 def get_help_text() -> str:
-    return """\n\n*Setup Alert*\nUse this to setup an alert, it will send a message as soon as a slot becomes available. Select the age preference and provide the area pincode of the vaccination center you would like to monitor. Do note that 18+ slots are monitored more often than 45+. Click on /pause to stop alerts and /resume to enable them back.\n\n*Check Open Slots*\nUse this to check the slots availability manually.\n\n*Age Preference*\nTo change age preference, click on /age\n\n*Pincode*\nClick on /pincode to change the pincode. Alternatively, you can send pincode any time and bot will update it.\n\n*Delete*\nClick on /delete if you would like delete all your information."""  ## noqa
+    return """\n\n*Setup Alert*\nUse this to setup an alert, it will send a message as soon as a slot becomes available. Select the age preference and provide the area districtcode of the vaccination center you would like to monitor. Do note that 18+ slots are monitored more often than 45+. Click on /pause to stop alerts and /resume to enable them back.\n\n*Check Open Slots*\nUse this to check the slots availability manually.\n\n*Age Preference*\nTo change age preference, click on /age\n\n*districtcode*\nClick on /districtcode to change the districtcode. Alternatively, you can send districtcode any time and bot will update it.\n\n*Delete*\nClick on /delete if you would like delete all your information."""  ## noqa
 
 
 def help_handler(update: Update, _: CallbackContext):
@@ -231,7 +231,7 @@ def privacy_policy_handler(update: Update, _: CallbackContext):
     header = "🔒 Privacy Policy\n\n"
     msg = F"CoWin Assist Bot stores minimal and only the information which is necessary. This includes:\n" \
           "  • Telegram account user id ({id})\n" \
-          "  • The pincode to search in CoWin site\n" \
+          "  • The districtcode to search in CoWin site\n" \
           "  • Age preference\n" \
           "\nThe bot *does not have access* to your real name or phone number." \
           "\n\nClick on /delete to delete all your data."
@@ -244,8 +244,8 @@ def age_command(update: Update, _: CallbackContext):
     return
 
 
-def pincode_command(update: Update, _: CallbackContext):
-    update.effective_chat.send_message("Enter your pincode")
+def districtcode_command(update: Update, _: CallbackContext):
+    update.effective_chat.send_message("Enter your districtcode")
 
 
 def check_if_preferences_are_set(update: Update, ctx: CallbackContext) -> Optional[User]:
@@ -259,7 +259,7 @@ def check_if_preferences_are_set(update: Update, ctx: CallbackContext) -> Option
         age_command(update, ctx)
         return
     if user.pincode is None:
-        pincode_command(update, ctx)
+        districtcode_command(update, ctx)
         return
     return user
 
@@ -292,8 +292,8 @@ def disable_alert_command(update: Update, _: CallbackContext) -> None:
     update.effective_chat.send_message("🔕 I have disabled the Alerts. Click on /resume to resume the alerts")
 
 
-def get_available_centers_by_pin(pincode: str) -> List[VaccinationCenter]:
-    vaccination_centers = CoWinAPIObj.calender_by_pin(pincode, CoWinAPI.today())
+def get_available_centers_by_pin(districtcode: str) -> List[VaccinationCenter]:
+    vaccination_centers = CoWinAPIObj.calender_by_pin(districtcode, CoWinAPI.today(), TOKEN)
     if vaccination_centers:
         vaccination_centers = [vc for vc in vaccination_centers if vc.has_available_sessions()]
     return vaccination_centers
@@ -307,7 +307,7 @@ def get_formatted_message(centers: List[VaccinationCenter], age_limit: AgeRangeP
     then we should show the age limit of the vaccination center
     """
     header = ""
-    # Some pincodes have more than 10 centers, in that case we just limit it to 10 and send those only.
+    # Some districtcodes have more than 10 centers, in that case we just limit it to 10 and send those only.
     if len(centers) > 10:
         header = F"Showing 10 centers out of {len(centers)}. Check [CoWin Site](https://www.cowin.gov.in/home) for full list\n"  ## noqa
 
@@ -353,7 +353,7 @@ def filter_centers_by_age_limit(age_limit: AgeRangePref, centers: List[Vaccinati
 
 
 def get_message_header(user: User) -> str:
-    return F"Following slots are available (pincode: {user.pincode}, age preference: {user.age_limit})\n"
+    return F"Following slots are available (districtcode: {user.pincode}, age preference: {user.age_limit})\n"
 
 
 def check_slots_command(update: Update, ctx: CallbackContext) -> None:
@@ -371,7 +371,7 @@ def check_slots_command(update: Update, ctx: CallbackContext) -> None:
     vaccination_centers = filter_centers_by_age_limit(user.age_limit, vaccination_centers)
     if not vaccination_centers:
         update.effective_chat.send_message(
-            F"Hey sorry, seems there are no free slots available (pincode: {user.pincode}, age preference: {user.age_limit})")
+            F"Hey sorry, seems there are no free slots available (districtcode: {user.pincode}, age preference: {user.age_limit})")
         return
 
     msg: str = get_formatted_message(centers=vaccination_centers, age_limit=user.age_limit)
@@ -409,36 +409,36 @@ def set_age_preference(update: Update, ctx: CallbackContext) -> None:
                                            reply_markup=InlineKeyboardMarkup([[*get_main_buttons()]]))
     else:
         update.effective_chat.send_message(
-            F"I have set your age preference to {user.age_limit}. Please enter your pincode to proceed")
+            F"I have set your age preference to {user.age_limit}. Please enter your districtcode to proceed")
 
 
-def set_pincode(update: Update, ctx: CallbackContext) -> None:
-    pincode = ctx.match.groupdict().get("pincode_mg")
-    if not pincode:
+def set_districtcode(update: Update, ctx: CallbackContext) -> None:
+    districtcode = ctx.match.groupdict().get("districtcode_mg")
+    if not districtcode:
         return
-    pincode = pincode.strip()
-    # validating pincode is the third difficult problem of computer science
-    # if pincode in ["000000", "111111", "123456"] or not len(pincode) == 6:
-    #     update.effective_chat.send_message("Uh oh! That doesn't look like a valid pincode."
-    #                                        "Please enter a valid pincode to proceed")
+    districtcode = districtcode.strip()
+    # validating districtcode is the third difficult problem of computer science
+    # if districtcode in ["000000", "111111", "123456"] or not len(districtcode) == 6:
+    #     update.effective_chat.send_message("Uh oh! That doesn't look like a valid districtcode."
+    #                                        "Please enter a valid districtcode to proceed")
     #     return
     try:
-        districtCode = int(pincode)
+        districtCode = int(districtcode)
         if districtCode < 0 or districtCode > 799:
             update.effective_chat.send_message("Uh oh! That doesn't look like a valid district code."
-                                               "Please enter a valid pincode from here: https://github.com/abhinavdc/cowin-pinger")
+                                               "Please enter a valid districtcode from here: https://github.com/abhinavdc/cowin-pinger")
             return
     except Exception as e:
         update.effective_chat.send_message("District code must be an integer")
         return
     user: User
     user, _ = get_or_create_user(telegram_id=update.effective_user.id, chat_id=update.effective_chat.id)
-    user.pincode = pincode
+    user.pincode = districtcode
     user.updated_at = datetime.now()
     user.deleted_at = None
     user.save()
 
-    msg: str = F"I have updated your pincode to {pincode}. If you'd like to change it, send a valid pincode " \
+    msg: str = F"I have updated your districtcode to {districtcode}. If you'd like to change it, send a valid districtcode " \
                "any time to me."
     reply_markup: InlineKeyboardMarkup
     if user.age_limit is None or user.age_limit == AgeRangePref.Unknown:
@@ -500,11 +500,11 @@ def frequent_background_worker():
 def background_worker(age_limit: AgeRangePref):
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
     time_now = datetime.now()
-    # find all distinct pincodes where pincode is not null and at least one user exists with alerts enabled
+    # find all distinct districtcodes where districtcode is not null and at least one user exists with alerts enabled
     query = User.select(User.pincode).where(
         (User.pincode.is_null(False)) & (User.enabled == True) & (
                 (User.age_limit == AgeRangePref.MinAgeAny) | (User.age_limit == age_limit))).distinct()
-    # TODO: Quick hack to load all pincodes in memory
+    # TODO: Quick hack to load all districtcodes in memory
     query = list(query)
     for distinct_user in query:
         # get all the available vaccination centers with open slots
@@ -513,7 +513,7 @@ def background_worker(age_limit: AgeRangePref):
         # time.sleep(COWIN_API_DELAY_INTERVAL)
         if not vaccination_centers:
             continue
-        # find all users for this pincode and alerts enabled
+        # find all users for this districtcode and alerts enabled
         user_query = User.select().where(
             (User.pincode == distinct_user.pincode) & (User.enabled == True) & (
                     (User.age_limit == AgeRangePref.MinAgeAny) | (User.age_limit == age_limit)
@@ -592,7 +592,7 @@ def main() -> None:
         BotCommand(command='help', description='provide help on how to use the bot'),
         BotCommand(command='resume', description='enable alerts on new slots'),
         BotCommand(command='pause', description='disable alerts on new slots'),
-        BotCommand(command='pincode', description='change pincode'),
+        BotCommand(command='districtcode', description='change districtcode'),
         BotCommand(command='age', description='change age preference'),
     ])
 
@@ -614,12 +614,12 @@ def main() -> None:
     updater.dispatcher.add_handler(CommandHandler("resume", setup_alert_command))
     updater.dispatcher.add_handler(CommandHandler("pause", disable_alert_command))
     updater.dispatcher.add_handler(CommandHandler("age", age_command))
-    updater.dispatcher.add_handler(CommandHandler("pincode", pincode_command))
+    updater.dispatcher.add_handler(CommandHandler("districtcode", districtcode_command))
     updater.dispatcher.add_handler(CommandHandler("delete", delete_cmd_handler))
     updater.dispatcher.add_handler(CallbackQueryHandler(set_age_preference, pattern=AGE_BUTTON_REGEX))
     updater.dispatcher.add_handler(CallbackQueryHandler(cmd_button_handler, pattern=CMD_BUTTON_REGEX))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex(
-        re.compile(PINCODE_PREFIX_REGEX, re.IGNORECASE)), set_pincode))
+        re.compile(districtcode_PREFIX_REGEX, re.IGNORECASE)), set_districtcode))
     updater.dispatcher.add_handler(MessageHandler(Filters.regex(
         re.compile(DISABLE_TEXT_REGEX, re.IGNORECASE)), disable_alert_command))
     updater.dispatcher.add_handler(MessageHandler(~Filters.command, default))
