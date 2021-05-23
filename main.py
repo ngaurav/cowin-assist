@@ -511,8 +511,6 @@ def background_worker(age_limit: AgeRangePref):
         vaccination_centers = get_available_centers_by_pin(distinct_user.districtcode)
         # sleep, since we have hit CoWin APIs
         # time.sleep(COWIN_API_DELAY_INTERVAL)
-        if not vaccination_centers:
-            continue
         # find all users for this districtcode and alerts enabled
         user_query = User.select().where(
             (User.districtcode == distinct_user.districtcode) & (User.enabled == True) & (
@@ -521,6 +519,8 @@ def background_worker(age_limit: AgeRangePref):
         for user in user_query:
             delta = time_now - user.last_alert_sent_at
             bot.send_message(chat_id=user.chat_id, disable_notification=True, text=sanitise_msg("Checked"), parse_mode='markdown')
+            if not vaccination_centers:
+                continue
            # if user age limit is 45, then we shouldn't ping them too often
             if user.age_limit == AgeRangePref.MinAge45:
                 if delta.seconds < MIN_45_NOTIFICATION_DELAY:
