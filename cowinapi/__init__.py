@@ -106,10 +106,10 @@ class CoWinAPI:
     date: valid date in str with DD-MM-YYYY format
     """
 
-    def calender_by_pin(self: "CoWinAPI", pincode: str, date: str) -> Optional[List[VaccinationCenter]]:
-        url = urllib.parse.urljoin(self.base_domain, "/api/v2/appointment/sessions/public/calendarByPin")
-        params = {'pincode': pincode, 'date': date}
-        r = self.requests.get(url, params=params, headers=self.get_default_headers())
+    def calender_by_pin(self: "CoWinAPI", pincode: str, date: str, token: str) -> Optional[List[VaccinationCenter]]:
+        url = urllib.parse.urljoin(self.base_domain, "/api/v2/appointment/sessions/calendarByDistrict")
+        params = {'district_id': pincode, 'date': date}
+        r = self.requests.get(url, params=params, headers=self.get_default_headers(token))
         if r.status_code == requests.codes.bad_request:
             raise CoWinAPIException(**r.json())
         if r.status_code == requests.codes.forbidden:
@@ -120,8 +120,9 @@ class CoWinAPI:
             return [VaccinationCenter.from_json(c) for c in centers]
         return
 
-    def get_default_headers(self) -> dict:
+    def get_default_headers(self, token: str) -> dict:
         return {'Accept-Language': self.accept_language, 'accept': 'application/json',
+                'Authorization': token,
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, '
                               'like Gecko) Chrome/90.0.4430.93 Safari/537.36'}
 
